@@ -4,23 +4,18 @@ import type { NextRequest } from "next/server";
 const privatePaths = ["/manage"];
 const unAuthPaths = ["/login"];
 
-// This function can be marked `async` if using `await` inside
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  //pathname: /manage/dashboard
   const isAuth = Boolean(request.cookies.get("accessToken")?.value);
-  // chưa đăng nhập thì không cho vào private path
   if (privatePaths.some((path) => pathname.startsWith(path)) && !isAuth) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
-  //   đăng nhập rồi thì k cho vào login nữa
   if (unAuthPaths.some((path) => pathname.startsWith(path)) && isAuth) {
     return NextResponse.redirect(new URL("/", request.url));
   }
-  return NextResponse.next;
+  return NextResponse.next(); // Tiếp tục xử lý yêu cầu
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
   matcher: ["/manage/:path*", "/login"],
 };
