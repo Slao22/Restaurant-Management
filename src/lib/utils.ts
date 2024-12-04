@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/use-toast";
 import { EntityError } from "@/lib/http";
 import { clsx, type ClassValue } from "clsx";
 import { UseFormSetError } from "react-hook-form";
@@ -39,3 +40,11 @@ export const handleErrorApi = ({
     });
   }
 };
+
+const isBrowser = typeof window !== "undefined";
+
+export const getAccessTokenFromLocalStorage = () =>
+  isBrowser ? localStorage.getItem("accessToken") : null;
+
+export const getRefreshTokenFromLocalStorage = () =>
+  isBrowser ? localStorage.getItem("refreshToken") : null;
