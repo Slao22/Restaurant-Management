@@ -43,7 +43,6 @@ export default function UpdateProfileForm() {
   }, [avatar, file]);
 
   const onSubmit = async (values: UpdateMeBodyType) => {
-    console.log("ngu");
     if (updateMeMutation.isPending) return;
     try {
       let body = values;
