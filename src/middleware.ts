@@ -9,7 +9,9 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   if (privatePaths.some((path) => pathname.startsWith(path)) && !refreshToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const url = new URL("/login", request.url);
+    url.searchParams.set("clearTokens", "true");
+    return NextResponse.redirect(url);
   }
   if (unAuthPaths.some((path) => pathname.startsWith(path)) && refreshToken) {
     return NextResponse.redirect(new URL("/", request.url));
@@ -20,8 +22,9 @@ export function middleware(request: NextRequest) {
     !accessToken &&
     refreshToken
   ) {
-    const url = new URL("/logout", request.url);
+    const url = new URL("/refresh-token", request.url);
     url.searchParams.set("refreshToken", refreshToken);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
   return NextResponse.next(); // Tiếp tục xử lý yêu cầu

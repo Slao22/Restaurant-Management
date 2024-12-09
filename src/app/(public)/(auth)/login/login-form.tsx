@@ -15,13 +15,16 @@ import { LoginBody, LoginBodyType } from "@/schemaValidations/auth.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoginMutation } from "@/queries/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { handleErrorApi } from "@/lib/utils";
-import { error } from "console";
-import { useRouter } from "next/navigation";
+import { handleErrorApi, removeTokensFromLocalStorage } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useAppContext } from "@/components/app-provider";
 
 export default function LoginForm() {
-  const router = useRouter();
-  const loginMutaion = useLoginMutation();
+  const searchParams = useSearchParams();
+  const clearTokens = searchParams.get("clearTokens");
+  const loginMutation = useLoginMutation();
+  const { isAuth, setIsAuth } = useAppContext();
   const form = useForm<LoginBodyType>({
     resolver: zodResolver(LoginBody),
     defaultValues: {
@@ -30,13 +33,24 @@ export default function LoginForm() {
     },
   });
 
+  const router = useRouter();
+  useEffect(() => {
+    if (clearTokens) {
+      setIsAuth(false);
+      console.log("vao khong");
+    }
+  }, [clearTokens, setIsAuth]);
+
   const onSubmit = async (data: LoginBodyType) => {
-    if (loginMutaion.isPending) return;
+    if (loginMutation.isPending) return;
     try {
-      const result = loginMutaion.mutateAsync(data);
+      const result = loginMutation.mutateAsync(data);
       toast({
         description: (await result).payload.message,
       });
+      setIsAuth(true);
+      console.log(isAuth, "oke");
+      console.log("vao");
       router.push("/manage/dashboard");
     } catch (error: any) {
       handleErrorApi({
