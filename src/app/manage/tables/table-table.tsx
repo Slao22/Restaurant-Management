@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretSortIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
+import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -13,7 +13,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 
 import {
@@ -33,13 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AccountListResType,
-  AccountType,
-} from "@/schemaValidations/account.schema";
-import AddEmployee from "@/app/manage/accounts/add-employee";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import EditEmployee from "@/app/manage/accounts/edit-employee";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   AlertDialog,
@@ -51,79 +43,76 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getTableLink, getVietnameseTableStatus } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 import AutoPagination from "@/components/auto-pagination";
-import {
-  useDeleteAccountMutation,
-  useGetAccountList,
-} from "@/queries/useAccount";
-import { toast } from "@/hooks/use-toast";
-import { handleErrorApi } from "@/lib/utils";
+import { TableListResType } from "@/schemaValidations/table.schema";
+import EditTable from "@/app/manage/tables/edit-table";
+import AddTable from "@/app/manage/tables/add-table";
+import { useGetTableList } from "@/queries/useTable";
+import { QRCodeTable } from "@/components/qrcode-table";
 
-type AccountItem = AccountListResType["data"][0];
+type TableItem = TableListResType["data"][0];
 
-const AccountTableContext = createContext<{
-  setEmployeeIdEdit: (value: number) => void;
-  employeeIdEdit: number | undefined;
-  employeeDelete: AccountItem | null;
-  setEmployeeDelete: (value: AccountItem | null) => void;
+const TableTableContext = createContext<{
+  setTableIdEdit: (value: number) => void;
+  tableIdEdit: number | undefined;
+  tableDelete: TableItem | null;
+  setTableDelete: (value: TableItem | null) => void;
 }>({
-  setEmployeeIdEdit: (value: number | undefined) => {},
-  employeeIdEdit: undefined,
-  employeeDelete: null,
-  setEmployeeDelete: (value: AccountItem | null) => {},
+  setTableIdEdit: (value: number | undefined) => {},
+  tableIdEdit: undefined,
+  tableDelete: null,
+  setTableDelete: (value: TableItem | null) => {},
 });
 
-export const columns: ColumnDef<AccountType>[] = [
+export const columns: ColumnDef<TableItem>[] = [
   {
-    accessorKey: "id",
-    header: "ID",
-  },
-  {
-    accessorKey: "avatar",
-    header: "Avatar",
+    accessorKey: "number",
+    header: "Số bàn",
     cell: ({ row }) => (
-      <div>
-        <Avatar className="aspect-square w-[100px] h-[100px] rounded-md object-cover">
-          <AvatarImage src={row.getValue("avatar")} />
-          <AvatarFallback className="rounded-none">
-            {row.original.name}
-          </AvatarFallback>
-        </Avatar>
-      </div>
+      <div className="capitalize">{row.getValue("number")}</div>
     ),
   },
   {
-    accessorKey: "name",
-    header: "Tên",
-    cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
+    accessorKey: "capacity",
+    header: "Sức chứa",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("capacity")}</div>
+    ),
   },
   {
-    accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Email
-          <CaretSortIcon className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    accessorKey: "status",
+    header: "Trạng thái",
+    cell: ({ row }) => (
+      <div>{getVietnameseTableStatus(row.getValue("status"))}</div>
+    ),
+  },
+  {
+    accessorKey: "token",
+    header: "QR Code",
+    cell: ({ row }) => (
+      <div>
+        <QRCodeTable
+          data={getTableLink({
+            token: row.getValue("token"),
+            tableNumber: row.getValue("number"),
+          })}
+        ></QRCodeTable>
+      </div>
+    ),
   },
   {
     id: "actions",
     enableHiding: false,
     cell: function Actions({ row }) {
-      const { setEmployeeIdEdit, setEmployeeDelete } =
-        useContext(AccountTableContext);
-      const openEditEmployee = () => {
-        setEmployeeIdEdit(row.original.id);
+      const { setTableIdEdit, setTableDelete } = useContext(TableTableContext);
+      const openEditTable = () => {
+        setTableIdEdit(row.original.number);
       };
 
-      const openDeleteEmployee = () => {
-        setEmployeeDelete(row.original);
+      const openDeleteTable = () => {
+        setTableDelete(row.original);
       };
       return (
         <DropdownMenu modal={false}>
@@ -136,10 +125,8 @@ export const columns: ColumnDef<AccountType>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={openEditEmployee}>Sửa</DropdownMenuItem>
-            <DropdownMenuItem onClick={openDeleteEmployee}>
-              Xóa
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openEditTable}>Sửa</DropdownMenuItem>
+            <DropdownMenuItem onClick={openDeleteTable}>Xóa</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -147,54 +134,36 @@ export const columns: ColumnDef<AccountType>[] = [
   },
 ];
 
-function AlertDialogDeleteAccount({
-  employeeDelete,
-  setEmployeeDelete,
+function AlertDialogDeleteTable({
+  tableDelete,
+  setTableDelete,
 }: {
-  employeeDelete: AccountItem | null;
-  setEmployeeDelete: (value: AccountItem | null) => void;
+  tableDelete: TableItem | null;
+  setTableDelete: (value: TableItem | null) => void;
 }) {
-  const { mutateAsync } = useDeleteAccountMutation();
-  const deleteAccount = async () => {
-    if (employeeDelete) {
-      try {
-        const result = await mutateAsync(employeeDelete.id);
-        setEmployeeDelete(null);
-        toast({
-          title: result.payload.message,
-        });
-      } catch (error) {
-        handleErrorApi({
-          error,
-        });
-      }
-    }
-  };
   return (
     <AlertDialog
-      open={Boolean(employeeDelete)}
+      open={Boolean(tableDelete)}
       onOpenChange={(value) => {
         if (!value) {
-          setEmployeeDelete(null);
+          setTableDelete(null);
         }
       }}
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Xóa nhân viên?</AlertDialogTitle>
+          <AlertDialogTitle>Xóa bàn ăn?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tài khoản{" "}
+            Bàn{" "}
             <span className="bg-foreground text-primary-foreground rounded px-1">
-              {employeeDelete?.name}
+              {tableDelete?.number}
             </span>{" "}
             sẽ bị xóa vĩnh viễn
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={deleteAccount}>
-            Continue
-          </AlertDialogAction>
+          <AlertDialogAction>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -202,17 +171,15 @@ function AlertDialogDeleteAccount({
 }
 // Số lượng item trên 1 trang
 const PAGE_SIZE = 10;
-export default function AccountTable() {
+export default function TableTable() {
   const searchParam = useSearchParams();
   const page = searchParam.get("page") ? Number(searchParam.get("page")) : 1;
   const pageIndex = page - 1;
   // const params = Object.fromEntries(searchParam.entries())
-  const [employeeIdEdit, setEmployeeIdEdit] = useState<number | undefined>();
-  const [employeeDelete, setEmployeeDelete] = useState<AccountItem | null>(
-    null
-  );
-  const accountListQuery = useGetAccountList();
-  const data = accountListQuery.data?.payload.data ?? [];
+  const [tableIdEdit, setTableIdEdit] = useState<number | undefined>();
+  const [tableDelete, setTableDelete] = useState<TableItem | null>(null);
+  const tableListQuery = useGetTableList();
+  const data: any[] = tableListQuery.data?.payload.data ?? [];
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -221,6 +188,7 @@ export default function AccountTable() {
     pageIndex, // Gía trị mặc định ban đầu, không có ý nghĩa khi data được fetch bất đồng bộ
     pageSize: PAGE_SIZE, //default page size
   });
+
   const table = useReactTable({
     data,
     columns,
@@ -251,35 +219,28 @@ export default function AccountTable() {
   }, [table, pageIndex]);
 
   return (
-    <AccountTableContext.Provider
-      value={{
-        employeeIdEdit,
-        setEmployeeIdEdit,
-        employeeDelete,
-        setEmployeeDelete,
-      }}
+    <TableTableContext.Provider
+      value={{ tableIdEdit, setTableIdEdit, tableDelete, setTableDelete }}
     >
       <div className="w-full">
-        <EditEmployee
-          id={employeeIdEdit}
-          setId={setEmployeeIdEdit}
-          onSubmitSuccess={() => {}}
-        />
-        <AlertDialogDeleteAccount
-          employeeDelete={employeeDelete}
-          setEmployeeDelete={setEmployeeDelete}
+        <EditTable id={tableIdEdit} setId={setTableIdEdit} />
+        <AlertDialogDeleteTable
+          tableDelete={tableDelete}
+          setTableDelete={setTableDelete}
         />
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filter emails..."
-            value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+            placeholder="Lọc số bàn"
+            value={
+              (table.getColumn("number")?.getFilterValue() as string) ?? ""
+            }
             onChange={(event) =>
-              table.getColumn("email")?.setFilterValue(event.target.value)
+              table.getColumn("number")?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
           />
           <div className="ml-auto flex items-center gap-2">
-            <AddEmployee />
+            <AddTable />
           </div>
         </div>
         <div className="rounded-md border">
@@ -342,11 +303,11 @@ export default function AccountTable() {
             <AutoPagination
               page={table.getState().pagination.pageIndex + 1}
               pageSize={table.getPageCount()}
-              pathname="/manage/accounts"
+              pathname="/manage/tables"
             />
           </div>
         </div>
       </div>
-    </AccountTableContext.Provider>
+    </TableTableContext.Provider>
   );
 }
