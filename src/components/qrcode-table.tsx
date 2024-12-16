@@ -34,7 +34,7 @@ export const QRCodeTable: React.FC<Props> = ({ data }) => {
         ecLevel="L"
         logoPadding={5}
         logoPaddingStyle="square"
-        value={``}
+        value={data}
         size={250}
         removeQrCodeBehindLogo
         qrStyle="fluid"
