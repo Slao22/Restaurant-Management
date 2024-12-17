@@ -40,6 +40,7 @@ import { useGetDish, useUpdateDishMutation } from "@/queries/useDish";
 import { UpdateEmployeeAccountBodyType } from "@/schemaValidations/account.schema";
 import { useUploadMediaMutation } from "@/queries/useMedia";
 import { toast } from "@/hooks/use-toast";
+import revalidateApiRequest from "@/apiRequest/revalidate";
 
 export default function EditDish({
   id,
@@ -108,6 +109,7 @@ export default function EditDish({
         };
       }
       const result = await updateAccountMutation.mutateAsync(body);
+      await revalidateApiRequest("dishes");
       toast({
         description: result.payload.message,
       });
