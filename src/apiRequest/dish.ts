@@ -10,7 +10,13 @@ import {
 
 const prefix = "/dishes";
 const dishApiRequest = {
-  getDishList: () => http.get<DishListResType>(`${prefix}`),
+  // getDishList: () =>
+  //   http.get<DishListResType>(`${prefix}`, { next: { tags: ["dishes"] } }),
+  getDishList: () =>
+    http.get<DishListResType>(`${prefix}`, {
+      cache: "force-cache",
+      next: { tags: ["dishes"] },
+    }),
   getDishListWithPagination: (query: DishListWithPaginationQueryType) =>
     http.get<DishListWithPaginationResType>(`${prefix}/pagination`),
 
