@@ -23,11 +23,11 @@ const menuItems: {
     href: "/guest/menu",
     role: [Role.Guest],
   },
-  // {
-  //   title: "Đơn hàng",
-  //   href: "/orders",
-  //   authRequired: true,
-  // },
+  {
+    title: "Đơn hàng",
+    href: "/guest/orders",
+    role: [Role.Guest],
+  },
   {
     title: "Đăng nhập",
     href: "/login",
